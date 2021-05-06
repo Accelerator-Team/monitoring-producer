@@ -1,0 +1,1 @@
+wget -c https://github.com/Accelerator-Team/monitoring-producer/raw/master/binaries/monitoring-producer-linux.tar.gz && tar -xzf monitoring-producer-linux.tar.gz -C /bin && rm monitoring-producer-linux.tar.gz

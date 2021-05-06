@@ -1,0 +1,28 @@
+{
+  "name": "monitoring-producer",
+  "version": "1.0.0",
+  "description": "Node app to capture system informartion and post it to an URL",
+  "main": "index.js",
+  "bin": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "pkg": {
+    "scripts": "index.js",
+    "outputPath": "binaries",
+    "targets": [ "latest-linux-x64" ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Accelerator-Team/monitoring-producer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Accelerator-Team/monitoring-producer/issues"
+  },
+  "homepage": "https://github.com/Accelerator-Team/monitoring-producer#readme",
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "systeminformation": "^5.6.17"
+  }
+}
