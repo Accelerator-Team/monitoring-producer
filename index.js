@@ -26,10 +26,14 @@ if (!server_url || !apiKey) {
 (async () => {
     try {
         let payload = {
-            SERVER_ID: "[ServerId]"
+            time: new Date(),
+            SERVER_ID: 1234,
         };
-
+    
         payload['uptime'] = si.time()['uptime'];
+
+        const osInfo = await si.osInfo();
+        payload['cname'] = osInfo['fqdn'];
 
         const mem = await si.mem();
         payload['mem_total'] = mem['total'];
@@ -49,13 +53,18 @@ if (!server_url || !apiKey) {
         payload['disksIO_rIO_sec'] = disksIO['rIO_sec'];
         payload['disksIO_wIO_sec'] = disksIO['wIO_sec'];
 
-//si.fsSize. size/used/available
-
         const fsStats = await si.fsStats();
         payload['fsStats_rx'] = fsStats['rx'];
         payload['fsStats_wx'] = fsStats['wx'];
         payload['fsStats_rx_sec'] = fsStats['rx_sec'];
         payload['fsStats_wx_sec'] = fsStats['wx_sec'];
+
+        const fsSize = await si.fsSize();
+        if (fsSize.length) {
+            payload['fsSize_size'] = fsSize[0]['size'];
+            payload['fsSize_used'] = fsSize[0]['used'];
+            payload['fsSize_available'] = fsSize[0]['available'];
+        }
 
         const networkStats = await si.networkStats("*");
         if (networkStats.length) {
@@ -65,36 +74,39 @@ if (!server_url || !apiKey) {
             payload['networkStats_tx_sec'] = networkStats[0]['tx_sec'];
         }
 
+        // console.log(JSON.stringify(payload));
         sendSystemInfo(JSON.stringify(payload));
         // set interval 1 min and capture and cache ---> check length of cache to 5 --> post
         // TODO --> Cache to memory and  to post every 5 min
     } catch (e) {
+        console.log("Error getting system info", e)
         // Deal with the fact the chain failed
     }
 })();
 
 // Post system information to monitoring server
 function sendSystemInfo(payload) {
-        const options = {
-            'method': 'POST',
-            'headers': {
-                'x-api-key': apiKey,
-                'Content-Type': 'application/json',
-                'Content-Length': payload.length
-            }
-        };
+    // console.log(payload);
+    const options = {
+        'method': 'POST',
+        'headers': {
+            'x-api-key': apiKey,
+            'Content-Type': 'application/json',
+            'Content-Length': payload.length
+        }
+    };
 
-        const req = https.request(server_url, options, res => {
-            console.log(`statusCode: ${res.statusCode}`)
-            // res.on('data', function (chunk) {
-                // console.log('BODY: ' + chunk);
-            // });
-        });
-
-        // req.on('error', function (e) {
-            // console.log('problem with request: ' + e.message);
+    const req = https.request(server_url, options, res => {
+        console.log(`statusCode: ${res.statusCode}`)
+        // res.on('data', function (chunk) {
+        // console.log('BODY: ' + chunk);
         // });
+    });
 
-        req.write(payload)
-        req.end()
+    // req.on('error', function (e) {
+    //     console.log('problem with request: ' + e.message);
+    // });
+
+    req.write(payload)
+    req.end()
 }
