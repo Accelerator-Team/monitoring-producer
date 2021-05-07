@@ -38,7 +38,7 @@ function sendSystemInfo(payload) {
     };
 
     const req = https.request(server_url, options, res => {
-        console.log(new Date(), `statusCode: ${res.statusCode}`);
+        // console.log(new Date(), `statusCode: ${res.statusCode}`);
     });
 
     req.on('error', function (e) {

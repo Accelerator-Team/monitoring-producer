@@ -17,8 +17,6 @@ echo "Copying configuration: ......";
 
 #cp cloudgate.service /etc/systemd/system/cloudgate.service
 wget -O /etc/systemd/system/monitoring-producer.service https://raw.githubusercontent.com/Accelerator-Team/monitoring-producer/main/systemd/monitoring-producer.service
-sed -i "s#root#${userName}#g" /etc/systemd/system/monitoring-producer.service
-
 
 echo "OK";
 echo "";
