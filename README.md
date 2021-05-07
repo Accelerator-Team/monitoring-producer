@@ -13,7 +13,7 @@ An app to capture system informartion and post it to an URL and exits the proces
 
 Then you can run it with this command: 
 
-    monitoring-producer --url="https://<<host>>/api/save" --api-key="xxxx-xxx-xxxx"
+    monitoring-producer url="https://<<host>>/api/save" api-key="xxxx-xxx-xxxx"
 
 **This version includes Node.js and all the dependencies in the binary, so it can run on any linux x64 without requirements**
 
@@ -38,7 +38,7 @@ Clone this repo then install NPM dependencies for ws-monitoring:
     npm install --ignore-scripts
 
 # Run monitoring-producer
-    node index.js --url="https://<<host>>/api/save" --api-key="xxxx-xxx-xxxx"
+    node index.js url="https://<<host>>/api/save" api-key="xxxx-xxx-xxxx"
 
 ## How to build a custom binary file
 

@@ -2,7 +2,8 @@ const si = require('systeminformation');
 const https = require('https');
 const argvs = process.argv.slice(2);
 let server_url, apiKey;
-
+let systemInforCache = [];
+const intervalInMilliseconds = 60000;
 
 // Compute args to extract --url and --api-key for making a post request to monitoring server
 if (!argvs.length || argvs.length < 2) {
@@ -11,9 +12,9 @@ if (!argvs.length || argvs.length < 2) {
 
 for (var i = 0; i < argvs.length; i++) {
     let arg = argvs[i];
-    if (arg.indexOf('--url') > -1 || arg.indexOf('--URL') > -1) {
+    if (arg.indexOf('url') > -1 || arg.indexOf('URL') > -1) {
         server_url = arg.split("=")[1].trim();
-    } else if (arg.indexOf('--api-key') > -1 || arg.indexOf('--API-KEY') > -1) {
+    } else if (arg.indexOf('api-key') > -1 || arg.indexOf('API-KEY') > -1) {
         apiKey = arg.split("=")[1].trim();
     }
 }
@@ -22,14 +23,39 @@ if (!server_url || !apiKey) {
     throw new Error("Mandatory arguments not received.");
 }
 
-// Compute system information
-(async () => {
+
+// Post system information to monitoring server
+function sendSystemInfo(payload) {
+    const options = {
+        'method': 'POST',
+        'headers': {
+            'x-api-key': apiKey,
+            'Content-Type': 'application/json',
+            'Content-Length': payload.length
+        }
+    };
+
+    const req = https.request(server_url, options, res => {
+        console.log(new Date(), `statusCode: ${res.statusCode}`);
+    });
+
+    req.on('error', function (e) {
+        // Deal with the fact the chain failed
+        console.log(new Date(), 'problem with post system information request: ' + e.message);
+    });
+
+    req.write(payload);
+    req.end()
+}
+
+// Collect and return system information
+async function getSystemInformation() {
     try {
         let payload = {
             time: new Date(),
             SERVER_ID: 1234,
         };
-    
+
         payload['uptime'] = si.time()['uptime'];
 
         const osInfo = await si.osInfo();
@@ -75,38 +101,28 @@ if (!server_url || !apiKey) {
         }
 
         // console.log(JSON.stringify(payload));
-        sendSystemInfo(JSON.stringify(payload));
-        // set interval 1 min and capture and cache ---> check length of cache to 5 --> post
-        // TODO --> Cache to memory and  to post every 5 min
+        return payload;
     } catch (e) {
-        console.log("Error getting system info", e)
         // Deal with the fact the chain failed
+        console.log(new Date(), "Error getting system info", e);
     }
-})();
-
-// Post system information to monitoring server
-function sendSystemInfo(payload) {
-    // console.log(payload);
-    const options = {
-        'method': 'POST',
-        'headers': {
-            'x-api-key': apiKey,
-            'Content-Type': 'application/json',
-            'Content-Length': payload.length
-        }
-    };
-
-    const req = https.request(server_url, options, res => {
-        console.log(`statusCode: ${res.statusCode}`)
-        // res.on('data', function (chunk) {
-        // console.log('BODY: ' + chunk);
-        // });
-    });
-
-    // req.on('error', function (e) {
-    //     console.log('problem with request: ' + e.message);
-    // });
-
-    req.write(payload)
-    req.end()
 }
+
+// Compute system information every ${intervalInMilliseconds} miliseconds
+setInterval(initWorker, intervalInMilliseconds);
+console.log(new Date(), "monitoring-producer scheduler started..");
+
+async function initWorker() {
+    const sysInfo = await getSystemInformation();
+    systemInforCache.push(sysInfo);
+
+    if (systemInforCache.length >= 5) {
+        sendSystemInfo(JSON.stringify(systemInforCache));
+        systemInforCache = [];
+    }
+}
+
+// Debug
+// (async () => {
+//     await initWorker();
+// })();
