@@ -6,14 +6,11 @@ An app to capture system informartion and post it to an URL and exits the proces
 **Note: You may want to run this as a CRON job to capture system information on specfic inverals***
 
 
-## Quickstart for Linux (Binary version)
+## Quickstart for Linux systemd service(Binary version)
 ### Linux one line installer: stable binary (no requirements, recommended)
 
-    wget -O - https://github.com/Accelerator-Team/monitoring-producer/raw/main/binaries/install.sh | bash
+    wget -O - https://github.com/Accelerator-Team/monitoring-producer/raw/main/systemd/install.sh | bash
 
-Then you can run it with this command: 
-
-    monitoring-producer url="https://<<host>>/api/save" api-key="xxxx-xxx-xxxx"
 
 **This version includes Node.js and all the dependencies in the binary, so it can run on any linux x64 without requirements**
 
@@ -38,7 +35,7 @@ Clone this repo then install NPM dependencies for ws-monitoring:
     npm install --ignore-scripts
 
 # Run monitoring-producer
-    node index.js url="https://<<host>>/api/save" api-key="xxxx-xxx-xxxx"
+    node index.js url="https://<<host>>/api/save" api-key="xxxx-xxx-xxxx" server-id="000000"
 
 ## How to build a custom binary file
 

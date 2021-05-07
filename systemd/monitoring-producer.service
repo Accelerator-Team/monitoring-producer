@@ -9,7 +9,7 @@ Type=simple
 Restart=always
 RestartSec=1
 User=root
-ExecStart=monitoring-producer server-id="12345" url="https://rocket-chat-256806-u44.vm.openvm.cloud/api/save" api-key="nEQM9LBkyUatSc_JoFkL3g"
+ExecStart=monitoring-producer server-id="[SERVER_ID]" url="[MONITORING_URL]" api-key="[API_KEY]"
 
 [Install]
 WantedBy=multi-user.target
