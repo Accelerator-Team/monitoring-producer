@@ -1,0 +1,16 @@
+[Unit]
+Description=monitoring-producer - App to capture system informartion and post it to an URL
+Documentation=https://github.com/Accelerator-Team/monitoring-producer
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+ExecStart=monitoring-producer server-id="12345" url="https://rocket-chat-256806-u44.vm.openvm.cloud/api/save" api-key="nEQM9LBkyUatSc_JoFkL3g"
+
+[Install]
+WantedBy=multi-user.target
+Alias=monitoring-producer.service

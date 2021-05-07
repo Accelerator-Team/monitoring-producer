@@ -1,7 +1,7 @@
 const si = require('systeminformation');
 const https = require('https');
 const argvs = process.argv.slice(2);
-let server_url, apiKey;
+let server_url, apiKey; serverId;
 let systemInforCache = [];
 const intervalInMilliseconds = 60000;
 
@@ -12,10 +12,12 @@ if (!argvs.length || argvs.length < 2) {
 
 for (var i = 0; i < argvs.length; i++) {
     let arg = argvs[i];
-    if (arg.indexOf('url') > -1 || arg.indexOf('URL') > -1) {
+    if (arg.indexOf('url') > -1 || arg.indexOf('URL') > -1) { // [MONITORING_URL]
         server_url = arg.split("=")[1].trim();
-    } else if (arg.indexOf('api-key') > -1 || arg.indexOf('API-KEY') > -1) {
+    } else if (arg.indexOf('api-key') > -1 || arg.indexOf('API-KEY') > -1) { // [API_KEY]
         apiKey = arg.split("=")[1].trim();
+    } else if (arg.indexOf('server-id') > -1 || arg.indexOf('SERVER-ID') > -1) { // [SERVER_ID]
+        serverId = arg.split("=")[1].trim();
     }
 }
 
@@ -53,7 +55,7 @@ async function getSystemInformation() {
     try {
         let payload = {
             time: new Date(),
-            SERVER_ID: 1234,
+            SERVER_ID: serverId,
         };
 
         payload['uptime'] = si.time()['uptime'];
