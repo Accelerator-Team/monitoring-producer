@@ -1,7 +1,7 @@
 const si = require('systeminformation');
 const https = require('https');
 const argvs = process.argv.slice(2);
-let server_url, apiKey; serverId;
+let server_url, apiKey, serverId;
 let systemInforCache = [];
 const intervalInMilliseconds = 60000;
 
