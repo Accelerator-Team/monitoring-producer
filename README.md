@@ -35,7 +35,7 @@ Clone this repo then install NPM dependencies for ws-monitoring:
     npm install --ignore-scripts
 
 # Run monitoring-producer
-    node index.js url="https://<<host>>/api/save" api-key="xxxx-xxx-xxxx" server-id="000000"
+    node index.js url="https://<<host>>" server-token="000000"
 
 ## How to build a custom binary file
 

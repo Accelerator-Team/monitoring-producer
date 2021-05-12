@@ -1,9 +1,12 @@
 const si = require('systeminformation');
+const cron = require('node-cron');
 const https = require('https');
+const exec = require('child_process').exec;
+
 const argvs = process.argv.slice(2);
-let server_url, apiKey, serverId;
-let systemInforCache = [];
-const intervalInMilliseconds = 60000;
+let server_url, serverToken;
+let systemInforCache = [], serverAuthorization;
+
 
 // Compute args to extract --url and --api-key for making a post request to monitoring server
 if (!argvs.length || argvs.length < 2) {
@@ -14,15 +17,53 @@ for (var i = 0; i < argvs.length; i++) {
     let arg = argvs[i];
     if (arg.indexOf('url') > -1 || arg.indexOf('URL') > -1) { // [MONITORING_URL]
         server_url = arg.split("=")[1].trim();
-    } else if (arg.indexOf('api-key') > -1 || arg.indexOf('API-KEY') > -1) { // [API_KEY]
-        apiKey = arg.split("=")[1].trim();
-    } else if (arg.indexOf('server-id') > -1 || arg.indexOf('SERVER-ID') > -1) { // [SERVER_ID]
-        serverId = arg.split("=")[1].trim();
+        // } else if (arg.indexOf('api-key') > -1 || arg.indexOf('API-KEY') > -1) { // [API_KEY]
+        //     apiKey = arg.split("=")[1].trim();
+    }
+    else if (arg.indexOf('server-token') > -1 || arg.indexOf('SERVER-TOKEN') > -1) { // [SERVER_ID]
+        serverToken = arg.split("=")[1].trim();
     }
 }
 
-if (!server_url || !apiKey) {
+// if (!server_url || !serverToken) {
+if (!server_url|| !serverToken) {
     throw new Error("Mandatory arguments not received.");
+}
+
+
+//Generate JWT token using server token
+async function generateJWT() {
+    return new Promise((resolve, reject) => {
+        const options = {
+            'method': 'GET',
+            'headers': {
+                'server-token': serverToken,
+                'Content-Type': 'application/json'
+            }
+        };
+
+        const req = https.request(`${server_url}/api/GenerateJWT`, options, res => {
+            // console.log(new Date(), `statusCode: ${res.statusCode}`);
+            res.on('data', d => {
+                try {
+                    d = JSON.parse(d);
+                    // console.log(new Date(), `data: ${d['jwt']}`);
+                    serverAuthorization = `Bearer ${d['jwt']}`;
+                    return resolve(d['jwt']);
+                } catch (e) {
+                    return resolve();
+                }
+
+            })
+        });
+
+        req.on('error', function (e) {
+            console.log(new Date(), 'problem with GenerateJWT request: ' + e.message);
+            return resolve();
+        });
+
+        req.end();
+    });
 }
 
 
@@ -31,13 +72,13 @@ function sendSystemInfo(payload) {
     const options = {
         'method': 'POST',
         'headers': {
-            'x-api-key': apiKey,
+            'Authorization': serverAuthorization,
             'Content-Type': 'application/json',
             'Content-Length': payload.length
         }
     };
 
-    const req = https.request(server_url, options, res => {
+    const req = https.request(`${server_url}/api/save`, options, res => {
         // console.log(new Date(), `statusCode: ${res.statusCode}`);
     });
 
@@ -47,15 +88,46 @@ function sendSystemInfo(payload) {
     });
 
     req.write(payload);
-    req.end()
+    req.end();
 }
+
+
+// get number of network packets out 
+function execCommandAsync(command) {
+    return new Promise((resolve, reject) => {
+        exec(command, function (error, stdout, stderr) {
+            if (error) {
+                console.log(new Date(), 'exec error: ' + error);
+            }
+            if (stderr) {
+                console.log(new Date(), 'exec stderr: ' + stderr);
+            }
+            return resolve(stdout);
+        });
+    });
+}
+
+
+// get number of network packets in/out 
+async function getNetworkPackets() {
+    let rx_packets = null, tx_packets = null;
+    try {
+        rx_packets = await execCommandAsync('cat /sys/class/net/eth0/statistics/rx_packets');
+        rx_packets = parseInt(rx_packets);
+        tx_packets = await execCommandAsync('cat /sys/class/net/eth0/statistics/tx_packets');
+        tx_packets = parseInt(tx_packets);
+    } catch (err) {
+        console.log(new Date(), 'problem while executing getNetworkPackets : ' + err);
+    }
+    return { rx_packets, tx_packets };
+}
+
 
 // Collect and return system information
 async function getSystemInformation() {
     try {
         let payload = {
             time: new Date(),
-            SERVER_ID: serverId,
         };
 
         payload['uptime'] = si.time()['uptime'];
@@ -102,6 +174,10 @@ async function getSystemInformation() {
             payload['networkStats_tx_sec'] = networkStats[0]['tx_sec'];
         }
 
+        const networkPackets = await getNetworkPackets();
+        payload['networkStats_rx_packets'] = networkPackets['rx_packets'];
+        payload['networkStats_tx_packets'] = networkPackets['tx_packets'];
+
         // console.log(JSON.stringify(payload));
         return payload;
     } catch (e) {
@@ -110,9 +186,7 @@ async function getSystemInformation() {
     }
 }
 
-// Compute system information every ${intervalInMilliseconds} miliseconds
-setInterval(initWorker, intervalInMilliseconds);
-console.log(new Date(), "monitoring-producer scheduler started..");
+// Compute system information */1 * * * *
 
 async function initWorker() {
     const sysInfo = await getSystemInformation();
@@ -124,7 +198,23 @@ async function initWorker() {
     }
 }
 
+const task = cron.schedule('*/1 * * * *', async () => {
+    if(serverAuthorization){
+        initWorker();
+    }else{
+        await generateJWT();
+        initWorker();
+    }
+}, {
+    scheduled: false
+});
+
+// Prod
+task.start();
+console.log(new Date(), "monitoring-producer cron job started..");
+
 // Debug
 // (async () => {
+//     await generateJWT();
 //     await initWorker();
 // })();
