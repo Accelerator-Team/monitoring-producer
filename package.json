@@ -10,7 +10,9 @@
   "pkg": {
     "scripts": "index.js",
     "outputPath": "binaries",
-    "targets": [ "latest-linux-x64" ]
+    "targets": [
+      "latest-linux-x64"
+    ]
   },
   "repository": {
     "type": "git",
@@ -23,6 +25,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "node-cron": "^3.0.0",
     "systeminformation": "^5.6.17"
   }
 }
