@@ -41,7 +41,7 @@ async function generateJWT() {
             }
         };
 
-        const req = https.request(`${server_url}/api/GenerateJWT`, options, res => {
+        const req = https.request(`${server_url}/api/jwt/generate`, options, res => {
             // console.log(new Date(), `statusCode: ${res.statusCode}`);
             res.on('data', d => {
                 try {
