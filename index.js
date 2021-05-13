@@ -2,10 +2,11 @@ const si = require('systeminformation');
 const cron = require('node-cron');
 const https = require('https');
 const exec = require('child_process').exec;
+let WebSocket = require("ws");
 
 const argvs = process.argv.slice(2);
-let server_url, serverToken;
-let systemInforCache = [], serverAuthorization;
+let ws, server_url, serverToken, systemInforCache = [], serverAuthorization, delayTimer = 0, wsConnectRetry = 0;
+
 
 
 // Compute args to extract --url and --api-key for making a post request to monitoring server
@@ -17,18 +18,17 @@ for (var i = 0; i < argvs.length; i++) {
     let arg = argvs[i];
     if (arg.indexOf('url') > -1 || arg.indexOf('URL') > -1) { // [MONITORING_URL]
         server_url = arg.split("=")[1].trim();
-        // } else if (arg.indexOf('api-key') > -1 || arg.indexOf('API-KEY') > -1) { // [API_KEY]
-        //     apiKey = arg.split("=")[1].trim();
     }
-    else if (arg.indexOf('server-token') > -1 || arg.indexOf('SERVER-TOKEN') > -1) { // [SERVER_ID]
+    else if (arg.indexOf('server-token') > -1 || arg.indexOf('SERVER-TOKEN') > -1) { // [SERVER_TOKEN]
         serverToken = arg.split("=")[1].trim();
     }
 }
 
 // if (!server_url || !serverToken) {
-if (!server_url|| !serverToken) {
+if (!server_url || !serverToken) {
     throw new Error("Mandatory arguments not received.");
 }
+
 
 
 //Generate JWT token using server token
@@ -42,24 +42,31 @@ async function generateJWT() {
             }
         };
 
-        const req = https.request(`${server_url}/api/GenerateJWT`, options, res => {
+        const req = https.request(`${server_url}/api/jwt/generate`, options, res => {
             // console.log(new Date(), `statusCode: ${res.statusCode}`);
             res.on('data', d => {
                 try {
                     d = JSON.parse(d);
                     // console.log(new Date(), `data: ${d['jwt']}`);
                     serverAuthorization = `Bearer ${d['jwt']}`;
-                    return resolve(d['jwt']);
                 } catch (e) {
-                    return resolve();
+                    console.log(new Date(), 'problem with GenerateJWT data: ' + e.message);
                 }
 
-            })
+            });
+
+            res.on('end', () => {
+                if (serverAuthorization) {
+                    return resolve(serverAuthorization);
+                } else {
+                    return reject()
+                }
+            });
         });
 
         req.on('error', function (e) {
             console.log(new Date(), 'problem with GenerateJWT request: ' + e.message);
-            return resolve();
+            return reject();
         });
 
         req.end();
@@ -67,29 +74,52 @@ async function generateJWT() {
 }
 
 
-// Post system information to monitoring server
-function sendSystemInfo(payload) {
+
+function initWebSocket() {
     const options = {
-        'method': 'POST',
-        'headers': {
-            'Authorization': serverAuthorization,
-            'Content-Type': 'application/json',
-            'Content-Length': payload.length
+        headers: {
+            "Authorization": serverAuthorization
         }
     };
 
-    const req = https.request(`${server_url}/api/save`, options, res => {
-        // console.log(new Date(), `statusCode: ${res.statusCode}`);
-    });
+    ws = new WebSocket(`${server_url}/ws/monitoring/save`, options);
 
-    req.on('error', function (e) {
-        // Deal with the fact the chain failed
-        console.log(new Date(), 'problem with post system information request: ' + e.message);
-    });
+    ws.onopen = function () {
+        wsConnectRetry = 0;
+        // console.log(new Date(), 'Monitoring producer is now connected to OpenVM backend');
+    };
 
-    req.write(payload);
-    req.end();
+    ws.onmessage = function (e) {
+        // console.log(new Date(), 'Message received from OpenVM backend: ', e.data);
+        try {
+            if (e.data) {
+                let msg = JSON.parse(e.data);
+                if (msg && msg.hasOwnProperty('delayTimer')) { // check if delayTimer in message
+                    delayTimer = parseInt(msg['delayTimer']);
+                    console.log(new Date(), 'delayTimer to post data:', delayTimer);
+                }
+            }
+        } catch (err) {
+            // Survive
+        }
+    };
+
+    ws.onclose = function (e) {
+        console.log(new Date(), 'Socket is closed. Code:', e.code, 'Retry after:', 1000 * wsConnectRetry);
+        setTimeout(function () {
+            initWebSocket();
+        }, 1000 * wsConnectRetry); //backoff mechanism
+    };
+
+    ws.onerror = function (err) {
+        console.error(new Date(), 'Socket encountered error: ', err.message, 'Closing socket');
+        ws.close();
+        wsConnectRetry += 1;
+    };
+
+    return ws;
 }
+
 
 
 // get number of network packets out 
@@ -188,33 +218,45 @@ async function getSystemInformation() {
 
 // Compute system information */1 * * * *
 
-async function initWorker() {
+async function spawnWorker() {
     const sysInfo = await getSystemInformation();
-    systemInforCache.push(sysInfo);
-
-    if (systemInforCache.length >= 5) {
-        sendSystemInfo(JSON.stringify(systemInforCache));
-        systemInforCache = [];
+    if(systemInforCache.length < 5){
+        systemInforCache.push(sysInfo);
+    }else{
+        systemInforCache.shift();
+        systemInforCache.push(sysInfo);
     }
+
+    setTimeout(function () {
+        ws.send(JSON.stringify(systemInforCache));
+        systemInforCache = [];
+    }, 1000 * delayTimer); //openVM mechanism
 }
 
 const task = cron.schedule('*/1 * * * *', async () => {
-    if(serverAuthorization){
-        initWorker();
-    }else{
-        await generateJWT();
-        initWorker();
-    }
+    spawnWorker();
 }, {
     scheduled: false
 });
 
-// Prod
-task.start();
-console.log(new Date(), "monitoring-producer cron job started..");
 
-// Debug
+async function mainWorker() {
+    try {
+        await generateJWT();
+    } catch (err) {
+        console.log(new Date(), 'error calling generateJWT ' + err);
+        mainWorker();
+        return;
+    }
+    initWebSocket();
+    // Debug
+    // await spawnWorker();
+    // Prod
+    task.start();
+}
+
 // (async () => {
-//     await generateJWT();
-//     await initWorker();
+    mainWorker();
+    console.log(new Date(), "monitoring-producer cron job started..");
 // })();
+
