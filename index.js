@@ -2,6 +2,7 @@ const si = require('systeminformation');
 const cron = require('node-cron');
 const https = require('https');
 const exec = require('child_process').exec;
+let WebSocket = require("ws");
 
 const argvs = process.argv.slice(2);
 let server_url, serverToken;
@@ -17,16 +18,14 @@ for (var i = 0; i < argvs.length; i++) {
     let arg = argvs[i];
     if (arg.indexOf('url') > -1 || arg.indexOf('URL') > -1) { // [MONITORING_URL]
         server_url = arg.split("=")[1].trim();
-        // } else if (arg.indexOf('api-key') > -1 || arg.indexOf('API-KEY') > -1) { // [API_KEY]
-        //     apiKey = arg.split("=")[1].trim();
     }
-    else if (arg.indexOf('server-token') > -1 || arg.indexOf('SERVER-TOKEN') > -1) { // [SERVER_ID]
+    else if (arg.indexOf('server-token') > -1 || arg.indexOf('SERVER-TOKEN') > -1) { // [SERVER_TOKEN]
         serverToken = arg.split("=")[1].trim();
     }
 }
 
 // if (!server_url || !serverToken) {
-if (!server_url|| !serverToken) {
+if (!server_url || !serverToken) {
     throw new Error("Mandatory arguments not received.");
 }
 
@@ -68,29 +67,59 @@ async function generateJWT() {
 
 
 // Post system information to monitoring server
-function sendSystemInfo(payload) {
+// function sendSystemInfo(payload) {
+//     const options = {
+//         'method': 'POST',
+//         'headers': {
+//             'Authorization': serverAuthorization,
+//             'Content-Type': 'application/json',
+//             'Content-Length': payload.length
+//         }
+//     };
+
+//     const req = https.request(`${server_url}/api/monitoring/save`, options, res => {
+//         // console.log(new Date(), `statusCode: ${res.statusCode}`);
+//     });
+
+//     req.on('error', function (e) {
+//         // Deal with the fact the chain failed
+//         console.log(new Date(), 'problem with post system information request: ' + e.message);
+//     });
+
+//     req.write(payload);
+//     req.end();
+// }
+
+
+function publishSystemInfo(payload) {
     const options = {
-        'method': 'POST',
-        'headers': {
-            'Authorization': serverAuthorization,
-            'Content-Type': 'application/json',
-            'Content-Length': payload.length
+        headers: {
+            "Authorization": serverAuthorization
         }
     };
 
-    const req = https.request(`${server_url}/api/save`, options, res => {
-        // console.log(new Date(), `statusCode: ${res.statusCode}`);
-    });
+    const ws = new WebSocket(`${server_url}/ws/monitoring/save`, options);
+    
+    ws.onopen = function () {
+        // console.log(new Date(), 'Monitoring producer is now connected to OpenVM backend');
+        ws.send(payload);
+    };
 
-    req.on('error', function (e) {
-        // Deal with the fact the chain failed
-        console.log(new Date(), 'problem with post system information request: ' + e.message);
-    });
+    ws.onmessage = function(e) {
+        // console.log(new Date(), 'Message received from OpenVM backend: ', e.data);
+        ws.close();
+    };
 
-    req.write(payload);
-    req.end();
+    ws.onclose = function(e) {
+        // console.log(new Date(), 'Socket is closed.', e.code);
+        ws.close();
+    };
+    
+    ws.onerror = function(err) {
+        console.error(new Date(), 'Socket encountered error: ', err.message, 'Closing socket');
+        ws.close();
+    };
 }
-
 
 // get number of network packets out 
 function execCommandAsync(command) {
@@ -192,16 +221,16 @@ async function initWorker() {
     const sysInfo = await getSystemInformation();
     systemInforCache.push(sysInfo);
 
-    if (systemInforCache.length >= 5) {
-        sendSystemInfo(JSON.stringify(systemInforCache));
+    // if (systemInforCache.length >= 5) {
+        publishSystemInfo(JSON.stringify(systemInforCache));
         systemInforCache = [];
-    }
+    // }
 }
 
 const task = cron.schedule('*/1 * * * *', async () => {
-    if(serverAuthorization){
+    if (serverAuthorization) {
         initWorker();
-    }else{
+    } else {
         await generateJWT();
         initWorker();
     }
