@@ -5,7 +5,7 @@ const exec = require('child_process').exec;
 let WebSocket = require("ws");
 
 const argvs = process.argv.slice(2);
-let ws, server_url, serverToken, systemInforCache = [], serverAuthorization, delayTimer = 0, wsConnectRetry = 0;
+let ws, server_url, serverToken, systemInforCache = [], serverAuthorization, delayTimer = 0, wsConnectRetry = 0, mainWorkerInitRetry = 0;
 
 
 
@@ -59,7 +59,7 @@ async function generateJWT() {
                 if (serverAuthorization) {
                     return resolve(serverAuthorization);
                 } else {
-                    return reject()
+                    return reject();
                 }
             });
         });
@@ -86,6 +86,7 @@ function initWebSocket() {
 
     ws.onopen = function () {
         wsConnectRetry = 0;
+        wsSendSystemInfoCache();
         // console.log(new Date(), 'Monitoring producer is now connected to OpenVM backend');
     };
 
@@ -118,6 +119,13 @@ function initWebSocket() {
     };
 
     return ws;
+}
+
+function wsSendSystemInfoCache() {
+    if (ws && ws.readyState == 1 && systemInforCache.length) {
+        ws.send(JSON.stringify(systemInforCache));
+        systemInforCache = [];
+    }
 }
 
 
@@ -220,16 +228,15 @@ async function getSystemInformation() {
 
 async function spawnWorker() {
     const sysInfo = await getSystemInformation();
-    if(systemInforCache.length < 5){
+    if (systemInforCache.length < 5) {
         systemInforCache.push(sysInfo);
-    }else{
+    } else {
         systemInforCache.shift();
         systemInforCache.push(sysInfo);
     }
 
     setTimeout(function () {
-        ws.send(JSON.stringify(systemInforCache));
-        systemInforCache = [];
+        wsSendSystemInfoCache();
     }, 1000 * delayTimer); //openVM mechanism
 }
 
@@ -244,11 +251,15 @@ async function mainWorker() {
     try {
         await generateJWT();
     } catch (err) {
-        console.log(new Date(), 'error calling generateJWT ' + err);
-        mainWorker();
+        console.log(new Date(), 'error calling generateJWT ');
+        mainWorkerInitRetry += 1;
+        setTimeout(function () {
+            mainWorker();
+        }, 1000 * mainWorkerInitRetry);
         return;
     }
     initWebSocket();
+    mainWorkerInitRetry = 0;
     // Debug
     // await spawnWorker();
     // Prod
@@ -256,7 +267,7 @@ async function mainWorker() {
 }
 
 // (async () => {
-    mainWorker();
-    console.log(new Date(), "monitoring-producer cron job started..");
+mainWorker();
+console.log(new Date(), "monitoring-producer cron job started..");
 // })();
 
