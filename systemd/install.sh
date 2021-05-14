@@ -36,8 +36,8 @@ echo "Copying configuration: ......";
 
 #cp cloudgate.service /etc/systemd/system/cloudgate.service
 wget -O /etc/systemd/system/monitoring-producer.service https://raw.githubusercontent.com/Accelerator-Team/monitoring-producer/feature/authorization/systemd/monitoring-producer.service
-sed -i "s#[SERVER_TOKEN]#${token}#g" /etc/systemd/system/monitoring-producer.service
-sed -i "s#[MONITORING_URL]#${url}#g" /etc/systemd/system/monitoring-producer.service
+sed -i "s#SERVER_TOKEN#${token}#g" /etc/systemd/system/monitoring-producer.service
+sed -i "s#MONITORING_URL#${url}#g" /etc/systemd/system/monitoring-producer.service
 
 echo "OK";
 echo "";

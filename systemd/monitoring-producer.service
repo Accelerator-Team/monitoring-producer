@@ -9,7 +9,7 @@ Type=simple
 Restart=always
 RestartSec=1
 User=root
-ExecStart=monitoring-producer server-token="[SERVER_TOKEN]" url="[MONITORING_URL]"
+ExecStart=monitoring-producer server-token="SERVER_TOKEN" url="MONITORING_URL"
 
 [Install]
 WantedBy=multi-user.target
