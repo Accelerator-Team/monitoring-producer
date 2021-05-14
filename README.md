@@ -9,7 +9,7 @@ An app to capture system informartion and post it to an URL and exits the proces
 ## Quickstart for Linux systemd service(Binary version)
 ### Linux one line installer: stable binary (no requirements, recommended)
 
-    wget -O - https://github.com/Accelerator-Team/monitoring-producer/raw/main/systemd/install.sh | bash
+    wget -O - https://github.com/Accelerator-Team/monitoring-producer/raw/main/systemd/install.sh | bash -s -- monitoring-url="[MONITORING_URL]" server-token="[SERVER_TOKEN]"
 
 
 **This version includes Node.js and all the dependencies in the binary, so it can run on any linux x64 without requirements**
