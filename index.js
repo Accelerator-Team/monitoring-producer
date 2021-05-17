@@ -252,10 +252,14 @@ async function mainWorker() {
         await generateJWT();
     } catch (err) {
         console.log(new Date(), 'error calling generateJWT ');
-        mainWorkerInitRetry += 1;
-        setTimeout(function () {
-            mainWorker();
-        }, 1000 * mainWorkerInitRetry);
+        if (mainWorkerInitRetry < 10) {
+            mainWorkerInitRetry += 1;
+            setTimeout(function () {
+                mainWorker();
+            }, 60000 * mainWorkerInitRetry);
+        }else{
+            console.log(new Date(), 'Max attempts exceed to generateJWT for this server. Monitoring process will exit now.');
+        }
         return;
     }
     initWebSocket();
