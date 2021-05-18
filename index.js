@@ -4,9 +4,8 @@ const https = require('https');
 const exec = require('child_process').exec;
 let WebSocket = require("ws");
 
-var streamController;
 const argvs = process.argv.slice(2);
-let ws, server_url, serverToken, systemInforCache = [], serverAuthorization, delayTimer = 0, wsConnectRetry = 0, mainWorkerInitRetry = 0;
+let ws, server_url, serverToken, systemInforCache = [], serverAuthorization, delayTimer = 0, wsConnectRetry = 0, mainWorkerInitRetry = 0, streamController;
 
 
 
@@ -98,7 +97,7 @@ function handleStartStream(msg) {
     if (!streamController && msg.hasOwnProperty('interval')) {
         setIntervalStartStream();
         const interval = msg['interval'] || 1000;
-        var streamController = setInterval(setIntervalStartStream, interval);
+        streamController = setInterval(setIntervalStartStream, interval);
     }
 }
 
@@ -137,6 +136,7 @@ function initWebSocket() {
                             break;
                         case "STREAM_START":
                             handleStartStream(msg);
+                            break;
                         case "STREAM_STOP":
                             handleStopStream(msg);
                             break;
