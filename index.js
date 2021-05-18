@@ -101,7 +101,7 @@ function handleStartStream(msg) {
     }
 }
 
-function handleStopStream(msg) {
+function handleStopStream() {
     if (streamController) {
         clearInterval(streamController);
         streamController = undefined;
@@ -138,7 +138,7 @@ function initWebSocket() {
                             handleStartStream(msg);
                             break;
                         case "STREAM_STOP":
-                            handleStopStream(msg);
+                            handleStopStream();
                             break;
                         default:
                             console.log("Unsupported command received from server");
@@ -151,6 +151,7 @@ function initWebSocket() {
     };
 
     ws.onclose = function (e) {
+        handleStopStream();
         console.log(new Date(), 'Socket is closed. Code:', e.code, 'Retry after:', 1000 * wsConnectRetry);
         setTimeout(function () {
             initWebSocket();
