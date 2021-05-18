@@ -4,6 +4,7 @@ const https = require('https');
 const exec = require('child_process').exec;
 let WebSocket = require("ws");
 
+var streamController;
 const argvs = process.argv.slice(2);
 let ws, server_url, serverToken, systemInforCache = [], serverAuthorization, delayTimer = 0, wsConnectRetry = 0, mainWorkerInitRetry = 0;
 
@@ -74,6 +75,39 @@ async function generateJWT() {
 }
 
 
+async function setIntervalStartStream() {
+    try {
+        let sysInfo = await getSystemInformation();
+        if (ws && ws.readyState == 1 && sysInfo) {
+            ws.send(JSON.stringify({ event: "START_STREAM", data: sysInfo }));
+        }
+    } catch (err) {
+        // console.log(new Date(), 'getSystemInformation error: ' + err);
+    }
+}
+
+
+function handleDelayPost(msg) {
+    if (msg.hasOwnProperty('value')) {
+        delayTimer = parseInt(msg['value']);
+    }
+    console.log(new Date(), 'delayTimer to post data:', delayTimer);
+}
+
+function handleStartStream(msg) {
+    if (!streamController && msg.hasOwnProperty('interval')) {
+        setIntervalStartStream();
+        const interval = msg['interval'] || 1000;
+        var streamController = setInterval(setIntervalStartStream, interval);
+    }
+}
+
+function handleStopStream(msg) {
+    if (streamController) {
+        clearInterval(streamController);
+        streamController = undefined;
+    }
+}
 
 function initWebSocket() {
     const options = {
@@ -95,9 +129,20 @@ function initWebSocket() {
         try {
             if (e.data) {
                 let msg = JSON.parse(e.data);
-                if (msg && msg.hasOwnProperty('delayTimer')) { // check if delayTimer in message
-                    delayTimer = parseInt(msg['delayTimer']);
-                    console.log(new Date(), 'delayTimer to post data:', delayTimer);
+                if (msg && msg.hasOwnProperty('cmd')) {
+                    const cmd = msg['cmd'];
+                    switch (cmd) {
+                        case "DELAY_POST":
+                            handleDelayPost(msg);
+                            break;
+                        case "STREAM_START":
+                            handleStartStream(msg);
+                        case "STREAM_STOP":
+                            handleStopStream(msg);
+                            break;
+                        default:
+                            console.log("Unsupported command received from server");
+                    }
                 }
             }
         } catch (err) {
@@ -123,7 +168,7 @@ function initWebSocket() {
 
 function wsSendSystemInfoCache() {
     if (ws && ws.readyState == 1 && systemInforCache.length) {
-        ws.send(JSON.stringify(systemInforCache));
+        ws.send(JSON.stringify({ event: "SCHEDULED_STREAM", data: systemInforCache }));
         systemInforCache = [];
     }
 }
@@ -257,7 +302,7 @@ async function mainWorker() {
             setTimeout(function () {
                 mainWorker();
             }, 60000 * mainWorkerInitRetry);
-        }else{
+        } else {
             console.log(new Date(), 'Max attempts exceed to generateJWT for this server. Monitoring process will exit now.');
         }
         return;
