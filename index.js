@@ -3,9 +3,12 @@ const cron = require('node-cron');
 const https = require('https');
 const exec = require('child_process').exec;
 let WebSocket = require("ws");
+const os = require("os");
 
 const argvs = process.argv.slice(2);
-let ws, server_url, serverToken, systemInforCache = [], serverAuthorization, delayTimer = 0, wsConnectRetry = 0, mainWorkerInitRetry = 0, streamController;
+let ws, server_url, serverToken, siStatupCache = {}, systemInforCache = [], serverAuthorization, delayTimer = 0,
+    schedulerReqSchema = { uptime: 1, cname: 1, memory: 1, cpu: 1, disksIO: 1, fsStats: 1, fsSize: 1, networkStats: 1 },
+    schedulerCron = '*/1 * * * *', wsConnectRetry = 0, mainWorkerInitRetry = 0, streamController;
 
 
 
@@ -74,9 +77,9 @@ async function generateJWT() {
 }
 
 
-async function setIntervalStartStream() {
+async function setIntervalStreamStart(reqSchema) {
     try {
-        let sysInfo = await getSystemInformation();
+        let sysInfo = await getSystemInformation(reqSchema);
         if (ws && ws.readyState == 1 && sysInfo) {
             ws.send(JSON.stringify({ event: "START_STREAM", data: sysInfo }));
         }
@@ -86,27 +89,52 @@ async function setIntervalStartStream() {
 }
 
 
-function handleDelayPost(msg) {
-    if (msg.hasOwnProperty('value')) {
-        delayTimer = parseInt(msg['value']);
+function handleStartConfig(msg) {
+    if (msg.hasOwnProperty('deplay')) {
+        delayTimer = parseInt(msg['deplay']);
     }
+
+    if (msg.hasOwnProperty('scheduler_req_schema')) {
+        schedulerReqSchema = msg['scheduler_req_schema'];
+    }
+
     console.log(new Date(), 'delayTimer to post data:', delayTimer);
 }
 
-function handleStartStream(msg) {
+function handleStreamStart(msg) {
     if (!streamController && msg.hasOwnProperty('interval')) {
-        setIntervalStartStream();
+        let reqSchema;
+        if (msg['stream_req_schema']) {
+            reqSchema = msg['stream_req_schema'];
+        }
+        setIntervalStreamStart(reqSchema);
         const interval = msg['interval'] || 1000;
-        streamController = setInterval(setIntervalStartStream, interval);
+        streamController = setInterval(setIntervalStreamStart, interval, reqSchema);
     }
 }
 
-function handleStopStream() {
+function handleStreamStop() {
     if (streamController) {
         clearInterval(streamController);
         streamController = undefined;
     }
 }
+
+
+async function handleFetchProcesses() {
+    try {
+        let payload = {
+            time: new Date(),
+        };
+
+        payload['payload'] = await si.processes();
+        ws.send(JSON.stringify({ event: "FETCH_PROCESSES", data: payload }));
+        return;
+    } catch (err) {
+        console.log(new Date(), "Error getting system info", err);
+    }
+}
+
 
 function initWebSocket() {
     const options = {
@@ -131,14 +159,27 @@ function initWebSocket() {
                 if (msg && msg.hasOwnProperty('cmd')) {
                     const cmd = msg['cmd'];
                     switch (cmd) {
-                        case "DELAY_POST":
-                            handleDelayPost(msg);
+                        case "START_CONFIG":
+                            handleStartConfig(msg);
                             break;
                         case "STREAM_START":
-                            handleStartStream(msg);
+                            handleStreamStart(msg);
+                            break;
+                        case "STREAM_UPDATE":
+                            handleStreamStop();
+                            handleStreamStart(msg);
                             break;
                         case "STREAM_STOP":
-                            handleStopStream();
+                            handleStreamStop();
+                            break;
+                        case "SCHEDULER_START":
+                            task.start();
+                            break;
+                        case "SCHEDULER_STOP":
+                            task.stop();
+                            break;
+                        case "FETCH_PROCESSES":
+                            handleFetchProcesses();
                             break;
                         default:
                             console.log("Unsupported command received from server");
@@ -151,7 +192,7 @@ function initWebSocket() {
     };
 
     ws.onclose = function (e) {
-        handleStopStream();
+        handleStreamStop();
         console.log(new Date(), 'Socket is closed. Code:', e.code, 'Retry after:', 1000 * wsConnectRetry);
         setTimeout(function () {
             initWebSocket();
@@ -208,59 +249,94 @@ async function getNetworkPackets() {
 
 
 // Collect and return system information
-async function getSystemInformation() {
+async function getSystemInformation(req = { uptime: 0, cname: 1, memory: 1, cpu: 1, disksIO: 0, fsStats: 0, fsSize: 1, networkStats: 0 }) {
     try {
         let payload = {
             time: new Date(),
         };
 
-        payload['uptime'] = si.time()['uptime'];
-
-        const osInfo = await si.osInfo();
-        payload['cname'] = osInfo['fqdn'];
-
-        const mem = await si.mem();
-        payload['mem_total'] = mem['total'];
-        payload['mem_free'] = mem['free'];
-        payload['mem_used'] = mem['used'];
-        payload['mem_swaptotal'] = mem['swaptotal'];
-        payload['mem_swapused'] = mem['swapused'];
-        payload['mem_swapfree'] = mem['swapfree'];
-
-        const cpu = await si.currentLoad();
-        payload['cpu_avgLoad'] = cpu['avgLoad'];
-        payload['cpu_currentLoad'] = cpu['currentLoad'];
-
-        const disksIO = await si.disksIO();
-        payload['disksIO_rIO'] = disksIO['rIO'];
-        payload['disksIO_wIO'] = disksIO['wIO'];
-        payload['disksIO_rIO_sec'] = disksIO['rIO_sec'];
-        payload['disksIO_wIO_sec'] = disksIO['wIO_sec'];
-
-        const fsStats = await si.fsStats();
-        payload['fsStats_rx'] = fsStats['rx'];
-        payload['fsStats_wx'] = fsStats['wx'];
-        payload['fsStats_rx_sec'] = fsStats['rx_sec'];
-        payload['fsStats_wx_sec'] = fsStats['wx_sec'];
-
-        const fsSize = await si.fsSize();
-        if (fsSize.length) {
-            payload['fsSize_size'] = fsSize[0]['size'];
-            payload['fsSize_used'] = fsSize[0]['used'];
-            payload['fsSize_available'] = fsSize[0]['available'];
+        if (req.uptime) {
+            payload['uptime'] = si.time()['uptime'];
         }
 
-        const networkStats = await si.networkStats("*");
-        if (networkStats.length) {
-            payload['networkStats_rx_bytes'] = networkStats[0]['rx_bytes'];
-            payload['networkStats_tx_bytes'] = networkStats[0]['tx_bytes'];
-            payload['networkStats_rx_sec'] = networkStats[0]['rx_sec'];
-            payload['networkStats_tx_sec'] = networkStats[0]['tx_sec'];
+
+        if (req.cname) {
+            // Read and set to cache as the value remains same
+            if (!siStatupCache.cname) {
+                siStatupCache.cname = os.hostname();
+            }
+            payload['cname'] = siStatupCache.cname;
         }
 
-        const networkPackets = await getNetworkPackets();
-        payload['networkStats_rx_packets'] = networkPackets['rx_packets'];
-        payload['networkStats_tx_packets'] = networkPackets['tx_packets'];
+
+        if (req.memory) {
+            const mem = await si.mem();
+            payload['mem_total'] = mem['total'];
+            payload['mem_free'] = mem['free'];
+            payload['mem_used'] = mem['used'];
+            payload['mem_swaptotal'] = mem['swaptotal'];
+            payload['mem_swapused'] = mem['swapused'];
+            payload['mem_swapfree'] = mem['swapfree'];
+        }
+
+
+        if (req.cpu) {
+            const cpu = await si.currentLoad();
+            payload['cpu_avgLoad'] = cpu['avgLoad'];
+            payload['cpu_currentLoad'] = cpu['currentLoad'];
+        }
+
+
+        if (req.disksIO) {
+            const disksIO = await si.disksIO();
+            payload['disksIO_rIO'] = disksIO['rIO'];
+            payload['disksIO_wIO'] = disksIO['wIO'];
+            payload['disksIO_rIO_sec'] = disksIO['rIO_sec'];
+            payload['disksIO_wIO_sec'] = disksIO['wIO_sec'];
+        }
+
+
+        if (req.fsStats) {
+            const fsStats = await si.fsStats();
+            payload['fsStats_rx'] = fsStats['rx'];
+            payload['fsStats_wx'] = fsStats['wx'];
+            payload['fsStats_rx_sec'] = fsStats['rx_sec'];
+            payload['fsStats_wx_sec'] = fsStats['wx_sec'];
+        }
+
+
+        if (req.fsSize) {
+            // Read and set to cache as the value remains same utill reboot
+            if (!siStatupCache.fsSize) {
+                const fsSize = await si.fsSize();
+                if (fsSize.length) {
+                    siStatupCache.fsSize = {
+                        'fsSize_size': fsSize[0]['size'],
+                        'fsSize_used': fsSize[0]['used'],
+                        'fsSize_available': fsSize[0]['available']
+                    };
+                }
+            }
+            payload['fsSize_size'] = siStatupCache.fsSize['fsSize_size'];
+            payload['fsSize_used'] = siStatupCache.fsSize['fsSize_used'];
+            payload['fsSize_available'] = siStatupCache.fsSize['fsSize_available'];
+        }
+
+
+        if (req.networkStats) {
+            const networkStats = await si.networkStats("*");
+            if (networkStats.length) {
+                payload['networkStats_rx_bytes'] = networkStats[0]['rx_bytes'];
+                payload['networkStats_tx_bytes'] = networkStats[0]['tx_bytes'];
+                payload['networkStats_rx_sec'] = networkStats[0]['rx_sec'];
+                payload['networkStats_tx_sec'] = networkStats[0]['tx_sec'];
+            }
+
+            const networkPackets = await getNetworkPackets();
+            payload['networkStats_rx_packets'] = networkPackets['rx_packets'];
+            payload['networkStats_tx_packets'] = networkPackets['tx_packets'];
+        }
+
 
         // console.log(JSON.stringify(payload));
         return payload;
@@ -273,7 +349,7 @@ async function getSystemInformation() {
 // Compute system information */1 * * * *
 
 async function spawnWorker() {
-    const sysInfo = await getSystemInformation();
+    const sysInfo = await getSystemInformation(schedulerReqSchema);
     if (systemInforCache.length < 5) {
         systemInforCache.push(sysInfo);
     } else {
@@ -286,7 +362,7 @@ async function spawnWorker() {
     }, 1000 * delayTimer); //openVM mechanism
 }
 
-const task = cron.schedule('*/1 * * * *', async () => {
+const task = cron.schedule(schedulerCron, async () => {
     spawnWorker();
 }, {
     scheduled: false
@@ -318,6 +394,7 @@ async function mainWorker() {
 
 // (async () => {
 mainWorker();
+// handleStartStream({ interval: 1000, stream_req_schema: {networkStats: 1, cpu: 1} })
 console.log(new Date(), "monitoring-producer cron job started..");
 // })();
 
