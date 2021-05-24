@@ -1,3 +1,4 @@
+const fs = require('fs');
 const si = require('systeminformation');
 const cron = require('node-cron');
 const https = require('https');
@@ -11,12 +12,7 @@ let ws, server_url, serverToken, siStatupCache = {}, systemInforCache = [], serv
     schedulerCron = '*/1 * * * *', wsConnectRetry = 0, mainWorkerInitRetry = 0, streamController;
 
 
-
 // Compute args to extract --url and --api-key for making a post request to monitoring server
-if (!argvs.length || argvs.length < 2) {
-    throw new Error("Mandatory arguments not received.");
-}
-
 for (var i = 0; i < argvs.length; i++) {
     let arg = argvs[i];
     if (arg.indexOf('url') > -1 || arg.indexOf('URL') > -1) { // [MONITORING_URL]
@@ -27,9 +23,17 @@ for (var i = 0; i < argvs.length; i++) {
     }
 }
 
+if (!serverToken) { // read serverToken from /opt/server_token.secret
+    try {
+        serverToken = fs.readFileSync('/opt/server_token.secret', { encoding: 'utf8', flag: 'r' });
+    } catch (err) {
+        console.log(new Date(), 'problem while reading /opt/server_token.secret: ' + err);
+    }
+}
+
 // if (!server_url || !serverToken) {
 if (!server_url || !serverToken) {
-    throw new Error("Mandatory arguments not received.");
+    throw "Mandatory arguments not received.";
 }
 
 
@@ -132,7 +136,7 @@ async function handleFetchProcesses() {
         return;
     } catch (err) {
         console.log(new Date(), "Error getting system info", err);
-        ws.send(JSON.stringify({event: "FETCH_PROCESSES", data: { status: "500", message: "INTERNAL_SERVER_ERROR: Error getting system information" }}), isBinary);
+        ws.send(JSON.stringify({ event: "FETCH_PROCESSES", data: { status: "500", message: "INTERNAL_SERVER_ERROR: Error getting system information" } }), isBinary);
     }
 }
 
