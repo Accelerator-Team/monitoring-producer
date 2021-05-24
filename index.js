@@ -127,11 +127,12 @@ async function handleFetchProcesses() {
             time: new Date(),
         };
 
-        payload['payload'] = await si.processes();
+        payload['processes'] = await si.processes();
         ws.send(JSON.stringify({ event: "FETCH_PROCESSES", data: payload }));
         return;
     } catch (err) {
         console.log(new Date(), "Error getting system info", err);
+        ws.send(JSON.stringify({event: "FETCH_PROCESSES", data: { status: "500", message: "INTERNAL_SERVER_ERROR: Error getting system information" }}), isBinary);
     }
 }
 
