@@ -18,13 +18,13 @@ done
 
 echo "url = $url"
 echo "server-token = $token"
-
+echo "$token" > /opt/server_token.secret;
 
 #Run AS (default: the current user)
 userName=$USER;
 
 echo "";
-echo "Download & Install cloudgate: ...";
+echo "Download & Install monitoring-producer: ...";
 echo "";
 
 wget -c https://github.com/Accelerator-Team/monitoring-producer/raw/main/binaries/monitoring-producer-linux.tar.gz && tar -xzf monitoring-producer-linux.tar.gz -C /bin && rm monitoring-producer-linux.tar.gz
