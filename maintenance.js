@@ -7,7 +7,6 @@ const schedulerCron = '*/1 * * * *'; // DEBUG
 const MAINTENANCE_BASE_URL = 'https://raw.githubusercontent.com/Accelerator-Team/monitoring-producer/main';
 const UPDATE_CHECK_URL = `${MAINTENANCE_BASE_URL}/package.json`;
 const UPDATE_INSTALL_URL = `${MAINTENANCE_BASE_URL}/systemd/update.sh`;
-let latestVersion;
 
 exports.init = async () => {
     this.scheduler.start();
@@ -26,6 +25,7 @@ exports.update = () => {
 
 //get latest package.json
 function getLatestPackage() {
+    let latestVersion;
     return new Promise((resolve, reject) => {
         const options = {
             'method': 'GET',
@@ -39,7 +39,7 @@ function getLatestPackage() {
             res.on('data', d => {
                 try {
                     d = JSON.parse(d);
-                    // console.log(new Date(), `data: ${d['jwt']}`);
+                    console.log(new Date(), `data: ${d['version']}`);
                     latestVersion = d.version
                 } catch (e) {
                     console.log(new Date(), 'problem with getLatestPackage data: ' + e.message);
@@ -67,7 +67,7 @@ function getLatestPackage() {
 async function checkforUpdate() {
     console.log('current app version', version);
     try {
-        await getLatestPackage();
+        const latestVersion = await getLatestPackage();
         console.log('latest app version', latestVersion);
         if (version != latestVersion) {
             console.log(new Date(), 'update available: v' + latestVersion);
