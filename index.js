@@ -26,7 +26,8 @@ for (var i = 0; i < argvs.length; i++) {
 
 if (!serverToken) { // read serverToken from /opt/server_token.secret
     try {
-        serverToken = fs.readFileSync('/opt/server_token.secret', { encoding: 'utf8', flag: 'r' });
+        serverToken = fs.readFileSync('/opt/server_token.secret', 'utf8');
+        serverToken = serverToken.trim();
     } catch (err) {
         console.log(new Date(), 'problem while reading /opt/server_token.secret: ' + err);
     }
@@ -40,7 +41,7 @@ if (!server_url || !serverToken) {
 
 
 //Generate JWT token using server token
-async function generateJWT() {
+ function generateJWT() {
     return new Promise((resolve, reject) => {
         const options = {
             'method': 'GET',
