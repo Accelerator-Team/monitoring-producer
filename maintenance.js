@@ -1,7 +1,8 @@
 const cron = require('node-cron');
+const fs = require('fs');
 const https = require('https');
 const { version } = require('./package.json');
-const exec = require('child_process').exec;
+const spawn = require('child_process').spawn;
 // const schedulerCron = '0 * * * *'; //PROD
 const schedulerCron = '*/1 * * * *'; // DEBUG
 const MAINTENANCE_BASE_URL = 'https://raw.githubusercontent.com/Accelerator-Team/monitoring-producer/main';
@@ -80,16 +81,29 @@ async function checkforUpdate() {
     }
 }
 
+// function installUpdate() {
+//     try {
+//         exec(`nohup wget -O - ${UPDATE_INSTALL_URL} | bash > /tmp/monitoring-update.log 2>&1 &`, function (error, stdout, stderr) {
+//             if (error) {
+//                 console.log(new Date(), 'exec error: ' + error);
+//             }
+//             if (stderr) {
+//                 console.log(new Date(), 'exec stderr: ' + stderr);
+//             }
+//         });
+//     } catch (e) {
+//         console.log(new Date(), 'problem spawning install update: ' + e.message);
+//     }
+// }
+
 function installUpdate() {
     try {
-        exec(`nohup wget -O - ${UPDATE_INSTALL_URL} | bash > /tmp/monitoring-update.log 2>&1 &`, function (error, stdout, stderr) {
-            if (error) {
-                console.log(new Date(), 'exec error: ' + error);
-            }
-            if (stderr) {
-                console.log(new Date(), 'exec stderr: ' + stderr);
-            }
+        fs.writeFileSync('/tmp/monitoring-update.sh', `wget -O - ${UPDATE_INSTALL_URL} | bash`);
+        fs.chmodSync('/tmp/monitoring-update.sh', "755");
+        const child = spawn('/tmp/monitoring-update.sh', [], {
+            detached: true, stdio: 'inherit'
         });
+        child.unref();
     } catch (e) {
         console.log(new Date(), 'problem spawning install update: ' + e.message);
     }
