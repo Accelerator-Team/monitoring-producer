@@ -1,6 +1,6 @@
 {
   "name": "monitoring-producer",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Node app to capture system informartion and post it to an URL",
   "main": "index.js",
   "bin": "index.js",
