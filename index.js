@@ -5,6 +5,7 @@ const https = require('https');
 const exec = require('child_process').exec;
 let WebSocket = require("ws");
 const os = require("os");
+const manitenance = require('./maintenance');
 
 const argvs = process.argv.slice(2);
 let ws, server_url, serverToken, siStatupCache = {}, systemInforCache = [], serverAuthorization, delayTimer = 0,
@@ -185,6 +186,9 @@ function initWebSocket() {
                             break;
                         case "FETCH_PROCESSES":
                             handleFetchProcesses();
+                            break;
+                        case "UPDATE_MONITORING_UPDATE":
+                            manitenance.update();
                             break;
                         default:
                             console.log("Unsupported command received from server");
@@ -375,6 +379,7 @@ const task = cron.schedule(schedulerCron, async () => {
 
 
 async function mainWorker() {
+    manitenance.init();
     try {
         await generateJWT();
     } catch (err) {
