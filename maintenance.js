@@ -80,7 +80,7 @@ async function checkforUpdate() {
 
 function installUpdate() {
     try {
-        exec(`wget -O - ${UPDATE_INSTALL_URL} | bash`, function (error, stdout, stderr) {
+        exec(`nohup wget -O - ${UPDATE_INSTALL_URL} | bash >/dev/null 2>&1 &`, function (error, stdout, stderr) {
             if (error) {
                 console.log(new Date(), 'exec error: ' + error);
             }
