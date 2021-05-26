@@ -142,6 +142,16 @@ async function handleFetchProcesses() {
     }
 }
 
+function handleGetVersion() {
+    try {
+        if (ws && ws.readyState == 1) {
+            ws.send(JSON.stringify({ event: "GET_PRODUCER_VERSION", data: manitenance.version() }));
+        }
+    } catch (err) {
+        // console.log(new Date(), 'get app version error: ' + err);
+    }
+}
+
 
 function initWebSocket() {
     const options = {
@@ -190,6 +200,9 @@ function initWebSocket() {
                             break;
                         case "UPDATE_MONITORING_PRODUCER":
                             manitenance.update();
+                            break;
+                        case "GET_PRODUCER_VERSION":
+                            handleGetVersion();
                             break;
                         default:
                             console.log("Unsupported command received from server");
