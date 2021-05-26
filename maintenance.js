@@ -23,6 +23,10 @@ exports.update = () => {
     installUpdate();
 };
 
+exports.version =  () => {
+    return version;
+};
+
 
 //get latest package.json
 function getLatestPackage() {
