@@ -188,7 +188,7 @@ function initWebSocket() {
                         case "FETCH_PROCESSES":
                             handleFetchProcesses();
                             break;
-                        case "UPDATE_MONITORING_UPDATE":
+                        case "UPDATE_MONITORING_PRODUCER":
                             manitenance.update();
                             break;
                         default:

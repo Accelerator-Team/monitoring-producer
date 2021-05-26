@@ -1,9 +1,6 @@
 echo "";
 echo "Staring to update monitoring-producer ..."
 
-# echo "stop monitoring-producer ..."
-# systemctl stop monitoring-producer
-
 
 echo "";
 echo "Removing current monitoring-producer: ...";
@@ -17,7 +14,7 @@ echo "";
 
 wget -c https://github.com/Accelerator-Team/monitoring-producer/raw/main/binaries/monitoring-producer-linux.tar.gz && tar -xzf monitoring-producer-linux.tar.gz -C /bin && rm monitoring-producer-linux.tar.gz
 
-
+echo "Restarting monitoring-producer ..."
 systemctl restart monitoring-producer
 
 
