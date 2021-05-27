@@ -8,7 +8,7 @@ const os = require("os");
 const manitenance = require('./maintenance');
 
 const argvs = process.argv.slice(2);
-let ws, server_url, serverToken, siStatupCache = {}, systemInforCache = [], serverAuthorization, delayTimer = 0,
+let ws, server_url, serverToken, siStatupCache = {}, siCpuCache = {}, systemInforCache = [], serverAuthorization, delayTimer = 0,
     schedulerReqSchema = { uptime: 1, cname: 1, memory: 1, cpu: 1, disksIO: 1, fsStats: 1, fsSize: 1, networkStats: 1 },
     schedulerCron = '*/1 * * * *', wsConnectRetry = 0, mainWorkerInitRetry = 0, streamController;
 
@@ -41,7 +41,7 @@ if (!server_url || !serverToken) {
 
 
 //Generate JWT token using server token
- function generateJWT() {
+function generateJWT() {
     return new Promise((resolve, reject) => {
         const options = {
             'method': 'GET',
@@ -85,7 +85,7 @@ if (!server_url || !serverToken) {
 
 async function setIntervalStreamStart(reqSchema) {
     try {
-        let sysInfo = await getSystemInformation(reqSchema);
+        let sysInfo = await getSystemInformation(reqSchema, true);
         if (ws && ws.readyState == 1 && sysInfo) {
             ws.send(JSON.stringify({ event: "START_STREAM", data: sysInfo }));
         }
@@ -272,7 +272,7 @@ async function getNetworkPackets() {
 
 
 // Collect and return system information
-async function getSystemInformation(req = { uptime: 0, cname: 1, memory: 1, cpu: 1, disksIO: 0, fsStats: 0, fsSize: 1, networkStats: 0 }) {
+async function getSystemInformation(req = { uptime: 0, cname: 1, memory: 1, cpu: 1, disksIO: 0, fsStats: 0, fsSize: 1, networkStats: 0 }, isStreaming = false) {
     try {
         let payload = {
             time: new Date(),
@@ -304,9 +304,18 @@ async function getSystemInformation(req = { uptime: 0, cname: 1, memory: 1, cpu:
 
 
         if (req.cpu) {
-            const cpu = await si.currentLoad();
-            payload['cpu_avgLoad'] = cpu['avgLoad'];
-            payload['cpu_currentLoad'] = cpu['currentLoad'];
+            if (isStreaming || !streamController) {
+                const cpu = await si.currentLoad();
+                siCpuCache['cpu_avgLoad'] = cpu['avgLoad'];
+                siCpuCache['cpu_currentLoad'] = cpu['currentLoad'];
+            }
+
+            payload['cpu_avgLoad'] = siCpuCache['cpu_avgLoad'];
+            payload['cpu_currentLoad'] = siCpuCache['cpu_currentLoad'];
+
+            if(!isStreaming){
+                siCpuCache = {};
+            }
         }
 
 
@@ -372,7 +381,7 @@ async function getSystemInformation(req = { uptime: 0, cname: 1, memory: 1, cpu:
 // Compute system information */1 * * * *
 
 async function spawnWorker() {
-    const sysInfo = await getSystemInformation(schedulerReqSchema);
+    const sysInfo = await getSystemInformation(schedulerReqSchema, false);
     if (systemInforCache.length < 5) {
         systemInforCache.push(sysInfo);
     } else {
