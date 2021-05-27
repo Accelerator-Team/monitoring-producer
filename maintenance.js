@@ -39,7 +39,7 @@ function getLatestPackage() {
             }
         };
 
-        const req = https.request(`${UPDATE_CHECK_URL}`, options, res => {
+        const req = https.request(`${UPDATE_CHECK_URL}?nocache=${(+new Date())}`, options, res => {
             // console.log(new Date(), `statusCode: ${res.statusCode}`);
             res.on('data', d => {
                 try {
