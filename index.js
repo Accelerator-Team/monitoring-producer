@@ -356,7 +356,7 @@ async function getSystemInformation(req = { uptime: 0, cname: 1, memory: 1, cpu:
 
 
         if (req.networkStats) {
-            const networkStats = await si.networkStats("*");
+            const networkStats = await si.networkStats();
             if (networkStats.length) {
                 payload['networkStats_rx_bytes'] = networkStats[0]['rx_bytes'];
                 payload['networkStats_tx_bytes'] = networkStats[0]['tx_bytes'];
