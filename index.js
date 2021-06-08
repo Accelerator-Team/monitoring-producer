@@ -313,7 +313,7 @@ async function getSystemInformation(req = { uptime: 0, cname: 1, memory: 1, cpu:
             payload['cpu_avgLoad'] = siCpuCache['cpu_avgLoad'];
             payload['cpu_currentLoad'] = siCpuCache['cpu_currentLoad'];
 
-            if(!isStreaming){
+            if (!isStreaming) {
                 siCpuCache = {};
             }
         }
@@ -338,20 +338,12 @@ async function getSystemInformation(req = { uptime: 0, cname: 1, memory: 1, cpu:
 
 
         if (req.fsSize) {
-            // Read and set to cache as the value remains same utill reboot
-            if (!siStatupCache.fsSize) {
-                const fsSize = await si.fsSize();
-                if (fsSize.length) {
-                    siStatupCache.fsSize = {
-                        'fsSize_size': fsSize[0]['size'],
-                        'fsSize_used': fsSize[0]['used'],
-                        'fsSize_available': fsSize[0]['available']
-                    };
-                }
+            const fsSize = await si.fsSize();
+            if (fsSize.length) {
+                payload['fsSize_size'] = fsSize[0]['size'];
+                payload['fsSize_used'] = fsSize[0]['used'];
+                payload['fsSize_available'] = fsSize[0]['available'];
             }
-            payload['fsSize_size'] = siStatupCache.fsSize['fsSize_size'];
-            payload['fsSize_used'] = siStatupCache.fsSize['fsSize_used'];
-            payload['fsSize_available'] = siStatupCache.fsSize['fsSize_available'];
         }
 
 
