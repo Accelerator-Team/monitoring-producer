@@ -271,6 +271,28 @@ async function getNetworkPackets() {
 }
 
 
+// Get average cpu load
+function getAvgCpuLoad() {
+    let cpu = {};
+    try {
+        const cpus = os.cpus();
+        const load = os.loadavg();
+        cpu = {
+            load1: load[0],
+            load5: load[1],
+            load15: load[2],
+            cores: Array.isArray(cpus) ? os.cpus().length : null,
+        };
+        cpu.load1 = Math.min((cpu.load1 * 100 / cpu.cores).toFixed(2), 100);
+        cpu.load5 = Math.min((cpu.load5 * 100 / cpu.cores).toFixed(2), 100);
+        cpu.load15 = Math.min((cpu.load15 * 100 / cpu.cores).toFixed(2), 100);
+    } catch (err) {
+
+    }
+    return cpu;
+}
+
+
 // Collect and return system information
 async function getSystemInformation(req = { uptime: 0, cname: 1, memory: 1, cpu: 1, disksIO: 0, fsStats: 0, fsSize: 1, networkStats: 0 }, isStreaming = false) {
     try {
@@ -306,13 +328,15 @@ async function getSystemInformation(req = { uptime: 0, cname: 1, memory: 1, cpu:
         if (req.cpu) {
             if (isStreaming || !streamController) {
                 const cpu = await si.currentLoad();
-                siCpuCache['cpu_avgLoad'] = cpu['avgLoad'];
+                // siCpuCache['cpu_avgLoad'] = cpu['avgLoad'];
                 siCpuCache['cpu_currentLoad'] = cpu['currentLoad'];
             }
 
-            payload['cpu_avgLoad'] = siCpuCache['cpu_avgLoad'];
             payload['cpu_currentLoad'] = siCpuCache['cpu_currentLoad'];
 
+            let avgCpuLoad = getAvgCpuLoad();
+            payload['cpu_avgLoad'] = avgCpuLoad['load15'];
+            
             if (!isStreaming) {
                 siCpuCache = {};
             }
