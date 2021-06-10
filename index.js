@@ -283,9 +283,12 @@ function getAvgCpuLoad() {
             load15: load[2],
             cores: Array.isArray(cpus) ? os.cpus().length : null,
         };
-        cpu.load1 = Math.min((cpu.load1 * 100 / cpu.cores).toFixed(2), 100);
-        cpu.load5 = Math.min((cpu.load5 * 100 / cpu.cores).toFixed(2), 100);
-        cpu.load15 = Math.min((cpu.load15 * 100 / cpu.cores).toFixed(2), 100);
+        // cpu.load1 = Math.min((cpu.load1 * 100 / cpu.cores).toFixed(2), 100);
+        // cpu.load5 = Math.min((cpu.load5 * 100 / cpu.cores).toFixed(2), 100);
+        // cpu.load15 = Math.min((cpu.load15 * 100 / cpu.cores).toFixed(2), 100);
+        cpu.load1 = Math.min((cpu.load1 * 100).toFixed(2), 100);
+        cpu.load5 = Math.min((cpu.load5 * 100 ).toFixed(2), 100);
+        cpu.load15 = Math.min((cpu.load15 * 100).toFixed(2), 100);
     } catch (err) {
 
     }
