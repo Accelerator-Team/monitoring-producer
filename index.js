@@ -424,14 +424,16 @@ async function mainWorker() {
     manitenance.init();
     try {
         await generateJWT();
+        mainWorkerInitRetry = 0;
     } catch (err) {
         console.log(new Date(), 'error calling generateJWT ');
-        if (mainWorkerInitRetry < 10) {
+        if (mainWorkerInitRetry < 50) {
             mainWorkerInitRetry += 1;
             setTimeout(function () {
                 mainWorker();
             }, 60000 * mainWorkerInitRetry);
-        } else {
+        } 
+        else {
             console.log(new Date(), 'Max attempts exceed to generateJWT for this server. Monitoring process will exit now.');
         }
         return;
