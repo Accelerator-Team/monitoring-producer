@@ -260,9 +260,9 @@ function execCommandAsync(command) {
 async function getNetworkPackets() {
     let rx_packets = null, tx_packets = null;
     try {
-        rx_packets = await execCommandAsync('cat /sys/class/net/eth0/statistics/rx_packets');
+        rx_packets = await execCommandAsync('cat /sys/class/net/$(ip route | grep default | sed -e "s/^.*dev.//" -e "s/.proto.*//")/statistics/rx_packets');
         rx_packets = parseInt(rx_packets);
-        tx_packets = await execCommandAsync('cat /sys/class/net/eth0/statistics/tx_packets');
+        tx_packets = await execCommandAsync('cat /sys/class/net/$(ip route | grep default | sed -e "s/^.*dev.//" -e "s/.proto.*//")/statistics/tx_packets');
         tx_packets = parseInt(tx_packets);
     } catch (err) {
         console.log(new Date(), 'problem while executing getNetworkPackets : ' + err);

@@ -1,6 +1,6 @@
 {
   "name": "monitoring-producer",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Node app to capture system informartion and post it to an URL",
   "main": "index.js",
   "bin": "index.js",
@@ -27,6 +27,6 @@
   "dependencies": {
     "node-cron": "^3.0.0",
     "systeminformation": "^5.6.17",
-    "ws": "^7.4.5"
+    "ws": "^7.5.5"
   }
 }
