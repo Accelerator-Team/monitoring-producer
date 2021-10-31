@@ -21,7 +21,7 @@ An app to capture system informartion and post it to an URL and exits the proces
 - Linux, Windows or Mac OS
 - Node LTE 
 
-## Install Node.js 12, NPM and GIT (Debian/Ubuntu)
+## Install Node.js 14, NPM and GIT (Debian/Ubuntu)
 
     sudo apt -y install curl dirmngr apt-transport-https lsb-release ca-certificates
     curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -
