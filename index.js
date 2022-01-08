@@ -263,6 +263,11 @@ async function getNetworkPackets() {
     if (mainInterfaceName == ""){
         mainInterfaceName = await execCommandAsync('ip route | grep default | sed -e "s/^.*dev.//" -e "s/.proto.*//"');
         mainInterfaceName = mainInterfaceName.trim();
+
+        //remove strange chars (case with oneprovider)
+        if ( mainInterfaceName.indexOf("eth0") > -1){
+            mainInterfaceName = "eth0";
+        }
     }
 
     let rx_packets = null, tx_packets = null;
@@ -272,7 +277,7 @@ async function getNetworkPackets() {
         tx_packets = await execCommandAsync('cat /sys/class/net/' + mainInterfaceName + '/statistics/tx_packets');
         tx_packets = parseInt(tx_packets);
     } catch (err) {
-        console.log(new Date(), 'problem while executing getNetworkPackets : ' + err);
+        //console.log(new Date(), 'problem while executing getNetworkPackets : ' + err);
     }
     return { rx_packets, tx_packets };
 }
