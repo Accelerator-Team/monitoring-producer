@@ -262,6 +262,7 @@ async function getNetworkPackets() {
 
     if (mainInterfaceName == ""){
         mainInterfaceName = await execCommandAsync('ip route | grep default | sed -e "s/^.*dev.//" -e "s/.proto.*//"');
+        mainInterfaceName = mainInterfaceName.trim();
     }
 
     let rx_packets = null, tx_packets = null;
