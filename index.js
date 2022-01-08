@@ -256,13 +256,19 @@ function execCommandAsync(command) {
 }
 
 
-// get number of network packets in/out 
+// get number of network packets in/out
+var mainInterfaceName = ""; 
 async function getNetworkPackets() {
+
+    if (mainInterfaceName == ""){
+        mainInterfaceName = await execCommandAsync('ip route | grep default | sed -e "s/^.*dev.//" -e "s/.proto.*//"');
+    }
+
     let rx_packets = null, tx_packets = null;
     try {
-        rx_packets = await execCommandAsync('cat /sys/class/net/$(ip route | grep default | sed -e "s/^.*dev.//" -e "s/.proto.*//")/statistics/rx_packets');
+        rx_packets = await execCommandAsync('cat /sys/class/net/' + mainInterfaceName + '/statistics/rx_packets');
         rx_packets = parseInt(rx_packets);
-        tx_packets = await execCommandAsync('cat /sys/class/net/$(ip route | grep default | sed -e "s/^.*dev.//" -e "s/.proto.*//")/statistics/tx_packets');
+        tx_packets = await execCommandAsync('cat /sys/class/net/' + mainInterfaceName + '/statistics/tx_packets');
         tx_packets = parseInt(tx_packets);
     } catch (err) {
         console.log(new Date(), 'problem while executing getNetworkPackets : ' + err);
