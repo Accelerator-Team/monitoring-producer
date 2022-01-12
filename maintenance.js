@@ -28,6 +28,14 @@ exports.version =  () => {
 };
 
 
+exports.latestPackage = async () => {
+    var lastVer = await getLatestPackage();
+    console.log(lastVer)
+    return lastVer;
+};
+
+
+
 //get latest package.json
 function getLatestPackage() {
     let latestVersion;
@@ -75,7 +83,7 @@ async function checkforUpdate() {
         const latestVersion = await getLatestPackage();
         // console.log('latest app version', latestVersion);
         if (version != latestVersion) {
-            console.log(new Date(), 'update available: v' + latestVersion + " over old version: " + version);
+            console.log(new Date(), 'update available: v' + latestVersion + " over old version: v" + version);
             installUpdate();
         } else {
             // console.log(new Date(), 'No update available');

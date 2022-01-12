@@ -10,6 +10,16 @@ const { version } = require('./package.json');
 
 console.log("Starting monitoring producer V" + version);
 
+//check if is up to date for debug
+/*
+(async () => {
+    var v1 = await manitenance.latestPackage();
+    var v2 = manitenance.version()
+    console.log("v1==v2: ", (v1 == v2))
+})();
+return;
+*/
+
 const argvs = process.argv.slice(2);
 let ws, server_url, serverToken, siStatupCache = {}, siCpuCache = {}, systemInforCache = [], serverAuthorization, delayTimer = 0,
     schedulerReqSchema = { uptime: 1, cname: 1, memory: 1, cpu: 1, disksIO: 1, fsStats: 1, fsSize: 1, networkStats: 1 },
