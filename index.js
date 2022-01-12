@@ -20,6 +20,12 @@ console.log("Starting monitoring producer V" + version);
 return;
 */
 
+/*
+setTimeout(function(){
+    manitenance.checkforUpdateNow();
+}, 2000);
+*/
+
 const argvs = process.argv.slice(2);
 let ws, server_url, serverToken, siStatupCache = {}, siCpuCache = {}, systemInforCache = [], serverAuthorization, delayTimer = 0,
     schedulerReqSchema = { uptime: 1, cname: 1, memory: 1, cpu: 1, disksIO: 1, fsStats: 1, fsSize: 1, networkStats: 1 },

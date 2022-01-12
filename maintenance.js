@@ -27,6 +27,9 @@ exports.version =  () => {
     return version;
 };
 
+exports.checkforUpdateNow =  () => {
+    checkforUpdate();
+};
 
 exports.latestPackage = async () => {
     var lastVer = await getLatestPackage();
@@ -86,7 +89,7 @@ async function checkforUpdate() {
             console.log(new Date(), 'update available: v' + latestVersion + " over old version: v" + version);
             installUpdate();
         } else {
-            // console.log(new Date(), 'No update available');
+            //console.log(new Date(), 'No update available');
         }
     } catch (e) {
         console.log(new Date(), 'problem while checking for update: ' + e.message);
