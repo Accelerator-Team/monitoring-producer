@@ -75,7 +75,7 @@ async function checkforUpdate() {
         const latestVersion = await getLatestPackage();
         // console.log('latest app version', latestVersion);
         if (version != latestVersion) {
-            console.log(new Date(), 'update available: v' + latestVersion);
+            console.log(new Date(), 'update available: v' + latestVersion + " over old version: " + version);
             installUpdate();
         } else {
             // console.log(new Date(), 'No update available');
