@@ -6,6 +6,9 @@ const exec = require('child_process').exec;
 let WebSocket = require("ws");
 const os = require("os");
 const manitenance = require('./maintenance');
+const { version } = require('./package.json');
+
+console.log("Starting monitoring producer V" + version);
 
 const argvs = process.argv.slice(2);
 let ws, server_url, serverToken, siStatupCache = {}, siCpuCache = {}, systemInforCache = [], serverAuthorization, delayTimer = 0,
