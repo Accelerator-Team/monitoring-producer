@@ -351,8 +351,8 @@ async function getSystemInformation(req = { uptime: 0, cname: 1, memory: 1, cpu:
         if (req.memory) {
             const mem = await si.mem();
             payload['mem_total'] = mem['total'];
-            payload['mem_free'] = mem['free'];
-            payload['mem_used'] = mem['used'];
+            payload['mem_free'] = mem['available'];
+            payload['mem_used'] = mem['active'];
             payload['mem_swaptotal'] = mem['swaptotal'];
             payload['mem_swapused'] = mem['swapused'];
             payload['mem_swapfree'] = mem['swapfree'];
