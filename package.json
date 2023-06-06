@@ -11,7 +11,8 @@
     "scripts": "index.js",
     "outputPath": "binaries",
     "targets": [
-      "latest-linux-x64"
+      "latest-linux-x64",
+      "latest-linux-arm64"
     ]
   },
   "repository": {

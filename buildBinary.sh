@@ -25,5 +25,10 @@ pkg /tmp/monitoring-producer/index.js --config package.json
 cd ./binaries;
 
 #create tar.gz
+cp monitoring-producer-x64 monitoring-producer
 tar -czvf monitoring-producer-linux.tar.gz monitoring-producer
+rm monitoring-producer
+
+cp monitoring-producer-arm64 monitoring-producer
+tar -czvf monitoring-producer-linux-arm64.tar.gz monitoring-producer
 rm monitoring-producer
