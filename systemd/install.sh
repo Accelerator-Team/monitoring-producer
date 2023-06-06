@@ -27,7 +27,19 @@ echo "";
 echo "Download & Install monitoring-producer: ...";
 echo "";
 
-wget -c https://github.com/Accelerator-Team/monitoring-producer/raw/main/binaries/monitoring-producer-linux.tar.gz && tar -xzf monitoring-producer-linux.tar.gz -C /bin && rm monitoring-producer-linux.tar.gz
+
+ARCH=$(uname -m)
+
+if [[ $ARCH == "x86_64" ]]; then
+  URL="https://github.com/Accelerator-Team/monitoring-producer/raw/main/binaries/monitoring-producer-linux.tar.gz"
+  wget -c $URL && tar -xzf monitoring-producer-linux.tar.gz -C /bin && rm monitoring-producer-linux.tar.gz
+elif [[ $ARCH == "aarch64" ]]; then
+  URL="https://github.com/Accelerator-Team/monitoring-producer/raw/main/binaries/monitoring-producer-linux-arm64.tar.gz"
+  wget -c $URL && tar -xzf monitoring-producer-linux-arm64.tar.gz -C /bin && rm monitoring-producer-linux-arm64.tar.gz
+else
+  echo "Unsupported architecture: $ARCH"
+  exit 1
+fi
 
 
 echo "";
